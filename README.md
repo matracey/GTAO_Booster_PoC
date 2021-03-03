@@ -1,18 +1,23 @@
 ## PoC that fixes two GTA Online bugs and drastically improves load times for CPU-bound systems
 
-All addresses hardcoded for Steam version 2215/1.53
+Original work by tostercx, massive thanks to them
 
-This is a proof of concept, not meant for casual use
+All addresses are found at run time so that it works on all platforms
 
-Modifying your game while in online mode might get your account suspended, proceed with care
+While chances are low, modifying your game while in online mode might get your account suspended, use at your own risk!
+
+Inject the dll found in [releases](https://github.com/QuickNET-Tech/GTAO_Booster_PoC/releases) with a DLL injector of your choice and then just head online
+NOTE : You can inject whenever you want as long as GTA5.exe is running and before you've started to head online
 
 ## How to
 
-* `git clone --recurse-submodules https://github.com/tostercx/GTAO_Booster_PoC`
+* `git clone --recurse-submodules https://github.com/QuickNET-Tech/GTAO_Booster_PoC`
 * build the project with MSVC
 * inject the DLL with your favorite injector while the game is starting up
 
-Might have to wait a few seconds before injecting - the game needs to deobfuscate some parts of itself
+or
+
+* in visual studio start a new project and provide a link to this repository
 
 ## More details
 
