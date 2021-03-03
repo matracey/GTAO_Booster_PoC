@@ -38,6 +38,10 @@ void create_console_and_redirect_io(void)
 {
 	AllocConsole();
 
+	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+
+	SetConsoleTitle(L"Grand Theft Auto V : Universal GTAO_Booster by QuickNET");
+	
 	FILE* file = NULL;
 
 	freopen_s(&file, "CONIN$", "r", stdin);
@@ -66,7 +70,10 @@ DWORD WINAPI unload_thread(LPVOID lpThreadParameter)
 
 void unload(void)
 {
-	printf("Unloading...");
+	printf("Unhooked netcat_insert_dedupe\n");
+	MH_DisableHook((LPVOID)netcat_insert_dedupe_addr);
+	
+	printf("Unloading...\n");
 
 	Sleep(1000);
 
@@ -92,9 +99,12 @@ size_t strlen_cacher(char* str)
 
 		// if we're near the end, unload self
 		// we don't want to mess something else up
-		if (len < cap / 2)
+		if(len < cap / 2)
+		{
+			printf("Unhooked strlen\n");
 			MH_DisableHook((LPVOID)strlen_addr);
-
+		}
+		
 		// super-fast return!
 		return len;
 	}
@@ -412,7 +422,6 @@ DWORD WINAPI initialize(LPVOID lpParam)
 		Sleep(1);
 	}
 
-	MH_DisableHook((LPVOID)netcat_insert_dedupe_addr);
 	unload();
 
 	return 0;
