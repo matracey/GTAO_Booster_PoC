@@ -387,6 +387,11 @@ void init_global_vars(void) {
 
 DWORD WINAPI initialize(LPVOID lpParam)
 {
+	while(!FindWindowW(L"grcWindow", NULL))
+	{
+		Sleep(1000);
+	}
+	
 	create_console_and_redirect_io();
 	printf(
 		"____________________________________________________________\n"
