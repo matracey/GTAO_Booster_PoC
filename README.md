@@ -1,4 +1,4 @@
-## PoC that fixes two GTA Online bugs and drastically improves load times for CPU-bound systems
+## PoC that fixes two GTA Online bugs and drastically improves load times for all systems
 
 Original work by tostercx, massive thanks to them
 
