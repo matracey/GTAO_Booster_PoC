@@ -6,7 +6,7 @@ All addresses are found at run time so that it works on all platforms
 
 While chances are low, modifying your game while in online mode might get your account suspended, use at your own risk!
 
-Inject the dll found in [releases](https://github.com/QuickNET-Tech/GTAO_Booster_PoC/releases) with a DLL injector of your choice and then just head online
+Inject the dll found in [releases](https://github.com/QuickNET-Tech/GTAO_Booster_PoC/releases) with a DLL injector of your choice and then just head online  
 NOTE : You can inject whenever you want as long as GTA5.exe is running and before you've started to head online
 
 ## How to
