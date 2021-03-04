@@ -1,3 +1,4 @@
+
 // ReSharper disable CppInconsistentNaming
 #include <stdint.h>
 #include <stdio.h>
@@ -9,10 +10,13 @@
 
 LPCWSTR messagebox_title = L"Universal GTAO_Booster";
 
+typedef uint8_t(__fastcall* virtual_function)(uint64_t*);
+virtual_function vfunc = NULL;
+
 typedef void(__fastcall* netcat_insert_direct_t)(uint64_t catalog, uint64_t* key, uint64_t** item);
 netcat_insert_direct_t netcat_insert_direct = NULL;
 
-typedef size_t (__cdecl* strlen_t)(const char *str);
+typedef size_t(__cdecl* strlen_t)(const char *str);
 strlen_t builtin_strlen = NULL;
 
 HANDLE uninject_thread = NULL;
@@ -34,14 +38,16 @@ void* gta_start;
 size_t gta_len;
 uint8_t* gta_end;
 
+BOOL should_exit_due_to_failure = FALSE;
+
 void create_console_and_redirect_io(void)
 {
 	AllocConsole();
 
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
-	SetConsoleTitle(L"Grand Theft Auto V : Universal GTAO_Booster by QuickNET");
-	
+	SetConsoleTitle(L"Grand Theft Auto V : Universal GTAO_Booster v1.0.1 by QuickNET ");
+
 	FILE* file = NULL;
 
 	freopen_s(&file, "CONIN$", "r", stdin);
@@ -72,13 +78,13 @@ void unload(void)
 {
 	printf("Unhooked netcat_insert_dedupe\n");
 	MH_DisableHook((LPVOID)netcat_insert_dedupe_addr);
-	
+
 	printf("Unloading...\n");
 
 	Sleep(1000);
 
 	remove_console_and_io_redirect();
-	
+
 	uninject_thread = CreateThread(NULL, 0, &unload_thread, NULL, 0, NULL);
 }
 
@@ -92,7 +98,7 @@ size_t strlen_cacher(char* str)
 	const size_t cap = 20000;
 
 	// if we have a "cached" string and current pointer is within it
-	if (start && str >= start && str <= end)
+	if(start && str >= start && str <= end)
 	{
 		// calculate the new strlen
 		len = end - str;
@@ -104,7 +110,7 @@ size_t strlen_cacher(char* str)
 			printf("Unhooked strlen\n");
 			MH_DisableHook((LPVOID)strlen_addr);
 		}
-		
+
 		// super-fast return!
 		return len;
 	}
@@ -116,7 +122,7 @@ size_t strlen_cacher(char* str)
 
 	// if it was the really long string
 	// save it's start and end addresses
-	if (len > cap)
+	if(len > cap)
 	{
 		start = str;
 		end = str + len;
@@ -134,14 +140,14 @@ char __fastcall netcat_insert_dedupe_hooked(uint64_t catalog, uint64_t* key, uin
 	uint64_t not_a_hashmap = catalog + 88;
 
 	// no idea what this does, but repeat what the original did
-	if (!(*(uint8_t(__fastcall**)(uint64_t*))(*item + 48))(item))
-	{
-		return 0;
+	vfunc = *(virtual_function*)(*item + 48);
+	if(!vfunc(item)) {
+	    return 0;
 	}
-	
+
 	// insert directly
 	netcat_insert_direct(not_a_hashmap, key, &item);
-	
+
 	return 1;
 }
 
@@ -181,18 +187,17 @@ int32_t hex_char_to_int(char const c)
 }
 
 /*	takes two chars making up half of a byte each and turns them into a single byte
-	e.g. make_hex_byte_into_char('E', '8') returns 0xE8	*/
+e.g. make_hex_byte_into_char('E', '8') returns 0xE8	*/
 char make_hex_byte_into_char(char first, char second)
 {
 	return (char)(hex_char_to_int(first) * 0x10 + hex_char_to_int(second) & 0xFF);
 }
 
-void generate_aob(char const* sig) {
-	size_t sig_str_len = strlen(sig);
-	
+void generate_aob(char const* sig)
+{
 	size_t aob_cursor = 0;
 
-	for(size_t sig_cursor = 0; sig_cursor <= sig_str_len;)
+	for(size_t sig_cursor = 0; sig_cursor <= strlen(sig);)
 	{
 		if(sig[sig_cursor] == '?')
 		{
@@ -214,26 +219,27 @@ void generate_aob(char const* sig) {
 	}
 }
 
-void generate_mask(char const* sig) {
-	size_t cursor = 0;
-	
-	for(size_t i = 0; i < strlen(sig) - 1;)
+void generate_mask(char const* sig)
+{
+	size_t mask_cursor = 0;
+
+	for(size_t sig_cursor = 0; sig_cursor < strlen(sig) - 1;)
 	{
-		if(sig[i] == '?')
+		if(sig[sig_cursor] == '?')
 		{
-			mask[cursor] = '?';
-			++cursor;
-			i += 2;
+			mask[mask_cursor] = '?';
+			++mask_cursor;
+			sig_cursor += 2;
 		}
-		else if(sig[i] == ' ')
+		else if(sig[sig_cursor] == ' ')
 		{
-			++i;
+			++sig_cursor;
 		}
 		else
 		{
-			mask[cursor] = 'x';
-			++cursor;
-			i += 3;
+			mask[mask_cursor] = 'x';
+			++mask_cursor;
+			sig_cursor += 3;
 		}
 	}
 }
@@ -300,14 +306,14 @@ void notify_on_scan_failure(char const* name)
 
 	wchar_t buf[0x7F];
 	int32_t result = swprintf_s(buf, _countof(buf), L"Pattern '%s' failed!", wname);
-	
+
 	if(result >= 0 && result <= (int32_t)_countof(buf))
 	{
 		MessageBox(NULL, buf, messagebox_title, 0);
 	}
 	else
 	{
-		MessageBox(NULL, L"Unknown pattern failed.\nPattern unknown because 'swprintf' also failed.", messagebox_title, 0);
+		MessageBox(NULL, L"Unknown pattern failed.\nPattern unknown because 'swprintf_s' also failed.", messagebox_title, 0);
 	}
 
 	free(wname);
@@ -315,9 +321,7 @@ void notify_on_scan_failure(char const* name)
 
 BOOL does_sig_match(uint8_t const* scan_cursor)
 {
-	size_t mask_len = strlen(mask);
-
-	for(size_t cursor = 0; cursor < mask_len; ++cursor)
+	for(size_t cursor = 0; cursor < strlen(mask); ++cursor)
 	{
 		if(mask[cursor] != '?' && aob[cursor] != scan_cursor[cursor])
 		{
@@ -328,45 +332,47 @@ BOOL does_sig_match(uint8_t const* scan_cursor)
 	return TRUE;
 }
 
-uint8_t* scan(char const* name, char const* sig)
+uint8_t* scan(char const* name, char const* sig, int64_t offset)
 {
 	fill_aob_and_mask_buffers(sig);
 
 #ifdef ENABLE_DEBUG_PRINTS
 	print_debug_sig_info(sig);
 #endif
-
-	size_t const sig_bytes = sig_byte_count(sig);
 	
-	uint8_t* scan_end = gta_end - sig_bytes;
+	uint8_t* scan_end = gta_end - sig_byte_count(sig);
 	for(uint8_t* scan_cursor = gta_start; scan_cursor < scan_end; ++scan_cursor)
 	{
 		if(does_sig_match(scan_cursor))
 		{
 			printf("Found %s\n", name);
-			return scan_cursor;
+			return scan_cursor + offset;
 		}
 	}
-	
+
 	notify_on_scan_failure(name);
+
+	should_exit_due_to_failure = TRUE;
 	
-	return 0;
+	return NULL;
 }
 
 uint8_t* rip(uint8_t* address)
 {
-	return address + *(int32_t*)address + 4;
+	return address
+		? address + *(int32_t*)address + 4  // NOLINT(clang-diagnostic-cast-align)
+		: NULL;
 }
 
 void find_pointers(void)
 {
-	netcat_insert_dedupe_addr = scan("netcat_insert_dedupe", "4C 89 44 24 18 57 48 83 EC ? 48 8B FA") - 0x5;
-	
-	strlen_addr = rip(scan("strlen", "48 3B C1 4C 8B C6") - 0x11);
-	
-	netcat_insert_direct = (netcat_insert_direct_t)rip(scan("netcat_insert_direct", "3B D1 B0 01 0F 4E D1") - 0x11);
+	netcat_insert_dedupe_addr = scan("netcat_insert_dedupe", "4C 89 44 24 18 57 48 83 EC ? 48 8B FA", -0x5);
 
-	is_session_started = rip(scan("is_session_started", "40 38 35 ? ? ? ? 74 ? 48 8B CF E8") + 0x3);
+	strlen_addr = rip(scan("strlen", "48 3B C1 4C 8B C6", -0x11));
+
+	netcat_insert_direct = (netcat_insert_direct_t)rip(scan("netcat_insert_direct", "3B D1 B0 01 0F 4E D1", -0x11));  // NOLINT(clang-diagnostic-cast-align)
+
+	is_session_started = rip(scan("is_session_started", "40 38 35 ? ? ? ? 74 ? 48 8B CF E8", 0x3));
 
 #ifdef ENABLE_DEBUG_PRINTS
 	printf("GTA5.exe == 0x%llX\n", (uint64_t)gta_start);
@@ -379,7 +385,7 @@ void find_pointers(void)
 void init_global_vars(void) {
 	gta_hmod = GetModuleHandleA(NULL);
 	gta_dos_header = (IMAGE_DOS_HEADER*)gta_hmod;
-	gta_nt_header = (IMAGE_NT_HEADERS*)((char*)gta_hmod + gta_dos_header->e_lfanew);
+	gta_nt_header = (IMAGE_NT_HEADERS*)((char*)gta_hmod + gta_dos_header->e_lfanew);  // NOLINT(clang-diagnostic-cast-align)
 	gta_start = (void*)gta_hmod;
 	gta_len = gta_nt_header->OptionalHeader.SizeOfImage;
 	gta_end = (uint8_t*)gta_start + gta_len;
@@ -391,7 +397,7 @@ DWORD WINAPI initialize(LPVOID lpParam)
 	{
 		Sleep(1000);
 	}
-	
+
 	create_console_and_redirect_io();
 	printf(
 		"____________________________________________________________\n"
@@ -402,25 +408,39 @@ DWORD WINAPI initialize(LPVOID lpParam)
 		"____________________________________________________________\n"
 		"                                                            \n"
 	);
-	
+
 	printf("Allocated console\n");
 
 	init_global_vars();
 	printf("Variables initialized\n");
-	
-	find_pointers();
-	printf("Finished finding pointers\n");
 
+	find_pointers();
+
+	if(should_exit_due_to_failure)
+	{
+		printf("One or more errors occurred while finding pointers\n");
+
+		unload();
+
+		return 0;
+	}
+	
+	printf("Finished finding pointers\n");
+		
 	MH_Initialize();
 	printf("MinHook initialized\n");
 
-	MH_CreateHook((LPVOID)strlen_addr, &strlen_cacher, (LPVOID*)&builtin_strlen);
-	MH_CreateHook((LPVOID)netcat_insert_dedupe_addr, &netcat_insert_dedupe_hooked, NULL);
+	MH_CreateHook((LPVOID)strlen_addr, (LPVOID)&strlen_cacher, (LPVOID*)&builtin_strlen);
+	MH_CreateHook((LPVOID)netcat_insert_dedupe_addr, (LPVOID)&netcat_insert_dedupe_hooked, NULL);
 	printf("Hooks created\n");
 
 	MH_EnableHook((LPVOID)strlen_addr);
 	MH_EnableHook((LPVOID)netcat_insert_dedupe_addr);
 	printf("Hooks enabled\n");
+
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0x0A);
+	printf("Load online when you're ready\nUniversal GTAO_Booster will unload and this window will disappear automatically, this is normal!\n");
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0x07); // might be 0x0F
 
 	while(!*is_session_started)
 	{
@@ -440,7 +460,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReversed)
 		gtao_booster_hmod = hinstDLL;
 		CreateThread(NULL, 0, initialize, hinstDLL, 0, NULL);
 		break;
-		
+
 	case DLL_PROCESS_DETACH:
 		MH_Uninitialize();
 		break;
