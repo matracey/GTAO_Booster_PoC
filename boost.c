@@ -402,7 +402,7 @@ DWORD WINAPI initialize(LPVOID lpParam)
 	printf(
 		"____________________________________________________________\n"
 		"                                                            \n"
-		"             Welcome to Universal GTAO_Booster.             \n"
+		"             Welcome to Universal GTAO_Booster!             \n"
 		"  Massive thanks to tostercx for the original GTAO_Booster  \n"
 		"        Universal GTAO_Booster created by QuickNET          \n"
 		"____________________________________________________________\n"
@@ -413,6 +413,8 @@ DWORD WINAPI initialize(LPVOID lpParam)
 
 	init_global_vars();
 	printf("Variables initialized\n");
+
+	uint64_t start_time = GetTickCount64();
 
 	find_pointers();
 
@@ -425,7 +427,7 @@ DWORD WINAPI initialize(LPVOID lpParam)
 		return 0;
 	}
 	
-	printf("Finished finding pointers\n");
+	printf("Finished finding pointers in %llums\n", GetTickCount64() - start_time);
 		
 	MH_Initialize();
 	printf("MinHook initialized\n");
